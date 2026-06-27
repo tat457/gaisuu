@@ -5,22 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="東京土産の概算を使って、5つの商品が予算内に収まるか考える学習ゲームです。"
+      content="東京土産の概算を使って、5つの商品が予算内に収まるか考える学習ゲームです。様々な四捨五入の位に対応しました。"
     />
     <title>東京土産の概算で予算内に収まるかゲーム</title>
     <style>
       :root {
-        --primary: #e11d48; /* 東京らしい赤・ピンク系のアクセンカラーに調整 */
+        --primary: #e11d48; /* 東京らしい華やかなサクラ・レッド */
         --primary-hover: #be123c;
+        --primary-light: #ffe4e6;
         --success: #10b981;
         --success-hover: #059669;
         --danger: #ef4444;
         --danger-hover: #dc2626;
-        --neutral-900: #111827;
-        --neutral-800: #1f2937;
-        --neutral-700: #374151;
-        --neutral-100: #f3f4f6;
-        --neutral-50: #f9fafb;
+        --neutral-900: #0f172a;
+        --neutral-800: #1e293b;
+        --neutral-700: #334155;
+        --neutral-300: #cbd5e1;
+        --neutral-100: #f1f5f9;
+        --neutral-50: #f8fafc;
         --accent: #d97706;
         --accent-light: #fef3c7;
       }
@@ -33,8 +35,962 @@
 
       body {
         font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-        background-color: #f5f5f7;
+        background-color: #f1f5f9;
         color: var(--neutral-800);
+        line-height: 1.6;
+        padding: 1rem;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .app {
+        width: 100%;
+        max-width: 680px;
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+      }
+
+      .game-board {
+        padding: 2rem;
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid var(--neutral-100);
+        padding-bottom: 1.2rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .eyebrow {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.2rem;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        color: var(--neutral-900);
+        font-weight: 800;
+      }
+
+      .controls-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .icon-button {
+        background-color: var(--neutral-100);
+        border: none;
+        color: var(--neutral-700);
+        font-size: 1.4rem;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      }
+
+      .icon-button:hover {
+        background-color: #e2e8f0;
+        transform: rotate(180deg);
+      }
+
+      /* 丸めモード選択エリア */
+      .mode-selector-card {
+        background-color: var(--neutral-50);
+        border: 2px solid var(--neutral-100);
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .mode-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--neutral-700);
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .mode-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+
+      @media (min-width: 600px) {
+        .mode-options {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      .mode-btn {
+        background: white;
+        border: 2px solid var(--neutral-300);
+        border-radius: 10px;
+        padding: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--neutral-700);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+      }
+
+      .mode-btn:hover {
+        border-color: var(--primary);
+        background-color: var(--neutral-50);
+      }
+
+      .mode-btn.active {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        color: white;
+      }
+
+      /* 予算・スコアパネル */
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .budget-panel, .score-panel {
+        background-color: var(--neutral-50);
+        border: 2px solid var(--neutral-100);
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      }
+
+      .budget-panel span, .score-panel span {
+        font-size: 0.85rem;
+        color: var(--neutral-700);
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      .budget-panel strong {
+        font-size: 1.8rem;
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      .score-panel strong {
+        font-size: 1.8rem;
+        color: var(--primary);
+        font-weight: 800;
+      }
+
+      /* 商品セクション */
+      .products-section {
+        margin-bottom: 1.8rem;
+      }
+
+      .section-head {
+        margin-bottom: 1rem;
+        background-color: var(--primary-light);
+        padding: 0.85rem 1.2rem;
+        border-radius: 12px;
+        border-left: 5px solid var(--primary);
+      }
+
+      .section-head h2 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--primary-hover);
+        margin-bottom: 0.25rem;
+      }
+
+      .section-head p {
+        font-size: 0.85rem;
+        color: var(--neutral-800);
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .product-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .product-item {
+        display: grid;
+        grid-template-columns: 50px 1.5fr 1fr 1.3fr;
+        align-items: center;
+        gap: 0.75rem;
+        background-color: var(--neutral-50);
+        border: 2px solid var(--neutral-100);
+        border-radius: 14px;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s;
+      }
+
+      .product-item:hover {
+        border-color: var(--neutral-300);
+        background-color: white;
+      }
+
+      .product-item:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
+        background-color: white;
+      }
+
+      .product-image-container {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: var(--neutral-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--neutral-300);
+      }
+
+      .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .product-name {
+        font-weight: 700;
+        color: var(--neutral-900);
+        font-size: 0.95rem;
+      }
+
+      .product-price {
+        font-size: 0.95rem;
+        color: var(--neutral-700);
+        font-weight: 800;
+        text-align: right;
+        padding-right: 0.5rem;
+      }
+
+      .approx-input-container {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+
+      .approx-input {
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border: 2px solid var(--neutral-300);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: bold;
+        text-align: right;
+        outline: none;
+        transition: all 0.15s;
+      }
+
+      .approx-input:focus {
+        border-color: var(--primary);
+      }
+
+      .approx-input.correct {
+        border-color: var(--success);
+        background-color: #ecfdf5;
+        color: var(--success-hover);
+      }
+
+      .approx-input.incorrect {
+        border-color: var(--danger);
+        background-color: #fef2f2;
+        color: var(--danger-hover);
+      }
+
+      .approx-unit {
+        font-size: 0.8rem;
+        color: var(--neutral-700);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      /* 回答エリア */
+      .answer-section {
+        background-color: #fef3c7;
+        border-radius: 20px;
+        padding: 1.5rem;
+        border: 2px dashed var(--accent);
+      }
+
+      .answer-section h2 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--neutral-900);
+        margin-bottom: 0.8rem;
+        text-align: center;
+      }
+
+      .choice-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .choice-button {
+        padding: 1rem;
+        font-size: 1.2rem;
+        font-weight: 800;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        color: white;
+      }
+
+      .choice-button.yes {
+        background-color: var(--success);
+      }
+
+      .choice-button.yes:hover {
+        background-color: var(--success-hover);
+        transform: translateY(-2px);
+      }
+
+      .choice-button.no {
+        background-color: var(--danger);
+      }
+
+      .choice-button.no:hover {
+        background-color: var(--danger-hover);
+        transform: translateY(-2px);
+      }
+
+      .choice-button:active {
+        transform: translateY(0);
+      }
+
+      .choice-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* 結果エリア */
+      .result {
+        border-radius: 14px;
+        margin-top: 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        display: none;
+        animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .result.show {
+        display: block;
+      }
+
+      .result-banner {
+        padding: 1.2rem;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 1.2rem;
+        font-size: 1.25rem;
+        font-weight: 800;
+      }
+
+      .result-banner.win {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 2px solid #34d399;
+      }
+
+      .result-banner.lose {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 2px solid #f87171;
+      }
+
+      .details-panel {
+        background: white;
+        border: 2px solid var(--neutral-100);
+        border-radius: 12px;
+        padding: 1.2rem;
+        font-size: 0.9rem;
+      }
+
+      .details-panel h3 {
+        font-size: 1.05rem;
+        margin-bottom: 0.75rem;
+        color: var(--neutral-900);
+        border-bottom: 2px solid var(--neutral-100);
+        padding-bottom: 0.4rem;
+        font-weight: 800;
+      }
+
+      .details-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .details-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0;
+        border-bottom: 1px dashed var(--neutral-100);
+      }
+
+      .details-product-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .details-img {
+        width: 28px;
+        height: 28px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid var(--neutral-300);
+      }
+
+      .math-summary {
+        background-color: var(--neutral-50);
+        padding: 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        border: 1px solid var(--neutral-100);
+      }
+
+      .math-line {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .math-line.highlight {
+        color: var(--primary);
+        border-top: 2px dashed var(--neutral-300);
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+        font-size: 1.05rem;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 550px) {
+        .game-board {
+          padding: 1.2rem;
+        }
+        .product-item {
+          grid-template-columns: 44px 1.2fr 0.8fr 1.3fr;
+          gap: 0.4rem;
+          padding: 0.6rem;
+        }
+        .product-image-container {
+          width: 44px;
+          height: 44px;
+        }
+        .product-name, .product-price, .approx-input {
+          font-size: 0.85rem;
+        }
+        h1 {
+          font-size: 1.3rem;
+        }
+        .budget-panel strong, .score-panel strong {
+          font-size: 1.5rem;
+        }
+        .choice-button {
+          font-size: 1.1rem;
+          padding: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="game-board" aria-labelledby="game-title">
+        <!-- トップバー -->
+        <div class="top-bar">
+          <div>
+            <p class="eyebrow" id="eyebrow-text">東京土産編 ✈️ 概算</p>
+            <h1 id="game-title">予算内でお土産買える？</h1>
+          </div>
+          <div class="controls-row">
+            <button class="icon-button" id="new-game-button" type="button" aria-label="新しい問題をつくる" title="新しい問題をつくる">
+              ↻
+            </button>
+          </div>
+        </div>
+
+        <!-- 四捨五入の位 選択パネル -->
+        <div class="mode-selector-card">
+          <div class="mode-title">
+            <span>🎯 四捨五入の基準を選ぼう：</span>
+          </div>
+          <div class="mode-options" role="radiogroup" aria-label="四捨五入の基準">
+            <button class="mode-btn active" id="mode-1000" type="button" role="radio" aria-checked="true" onclick="changeMode('1000')">
+              百の位を四捨五入<br><small>(千の位まで)</small>
+            </button>
+            <button class="mode-btn" id="mode-100" type="button" role="radio" aria-checked="false" onclick="changeMode('100')">
+              十の位を四捨五入<br><small>(百の位まで)</small>
+            </button>
+            <button class="mode-btn" id="mode-10" type="button" role="radio" aria-checked="false" onclick="changeMode('10')">
+              一の位を四捨五入<br><small>(十の位まで)</small>
+            </button>
+            <button class="mode-btn" id="mode-random" type="button" role="radio" aria-checked="false" onclick="changeMode('random')">
+              問題ごとにランダム<br><small>(腕試し！)</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- ステータス表示（予算・スコア） -->
+        <div class="status-grid" aria-label="現在の問題情報">
+          <div class="budget-panel">
+            <span>今回の予算</span>
+            <strong id="budget-text">0円</strong>
+          </div>
+          <div class="score-panel">
+            <span>スコア</span>
+            <strong id="score-text">0 / 0</strong>
+          </div>
+        </div>
+
+        <!-- 商品リストセクション -->
+        <section class="products-section" aria-labelledby="products-title">
+          <div class="section-head">
+            <h2 id="products-title">お土産の金額と、自分で考える概数（がいすう）</h2>
+            <p id="rule-guide-text">
+              お土産の金額を<b>百の位で四捨五入</b>して、千の位までの概数にしよう！<br>
+              (例：1,480円 → 1,000円 / 2,500円 → 3,000円)
+            </p>
+          </div>
+          <ul class="product-list" id="product-list">
+            <!-- JavaScriptでここに動的に商品が追加されます -->
+          </ul>
+        </section>
+
+        <!-- 回答セクション -->
+        <section class="answer-section" aria-labelledby="answer-title">
+          <h2 id="answer-title">お買い物見積もり：予算内で買える？</h2>
+          <div class="choice-row">
+            <button class="choice-button yes" id="yes-button" type="button">買える</button>
+            <button class="choice-button no" id="no-button" type="button">買えない</button>
+          </div>
+          <div class="result" id="result" role="status" aria-live="polite">
+            <!-- 結果がここに表示されます -->
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      // 東京土産データベース24選 (名前, 価格設定, 画像ファイル名, フォールバック用絵文字)
+      const PRODUCT_DATABASE = [
+        { name: "東京ばな奈 (8個入)", minPrice: 1100, maxPrice: 1300, image: "TOKYObanana_01_DeliveryOnly.jpg", emoji: "🍌" },
+        { name: "東京ひよ子 (9個入)", minPrice: 1200, maxPrice: 1550, image: "o0617046613921804988.jpg", emoji: "🐤" },
+        { name: "雷おこし 詰め合わせ", minPrice: 830, maxPrice: 1250, image: "sd3_7420107c4f40493e696c16a57062d05800f55476.jpg", emoji: "⚡" },
+        { name: "江戸祭 人形焼", minPrice: 1040, maxPrice: 1420, image: "202002920_1.jpg", emoji: "👺" },
+        { name: "芋ようかん (6個入)", minPrice: 820, maxPrice: 1150, image: "61hrAOXEBL.jpg", emoji: "🍠" },
+        { name: "とらや 小形羊羹", minPrice: 3100, maxPrice: 3600, image: "qolca_toraya7-packet_1_d_20240405154014.jpg", emoji: "🍵" },
+        { name: "ごまじたまご (12個入)", minPrice: 1220, maxPrice: 1680, image: "80001175_2.jpg", emoji: "🥚" },
+        { name: "ちとせ 天ぷらせんべい", minPrice: 1250, maxPrice: 1850, image: "tc08101_s.jpg", emoji: "🍤" },
+        { name: "バウムクーヘン詰め合わせ", minPrice: 2050, maxPrice: 3050, image: "kensbaum_plane-baum-15.jpg", emoji: "🍩" },
+        { name: "資生堂パーラー サブレ", minPrice: 1150, maxPrice: 1650, image: "0000000298_5845055730.jpg", emoji: "🍪" },
+        { name: "帝国ホテル クッキー缶", minPrice: 2550, maxPrice: 3850, image: "f9c835512986446fba50120563e6b2e7.jpg", emoji: "🏰" },
+        { name: "銀座ウエスト リーフパイ", minPrice: 1530, maxPrice: 2450, image: "0000696386-001.jpg", emoji: "🍃" },
+        { name: "東京レンガぱん (4個入)", minPrice: 1220, maxPrice: 1650, image: "61H8SM8VVTL._AC_UF10001000_QL80_.jpg", emoji: "🧱" },
+        { name: "ミルフィユ 詰め合わせ", minPrice: 1620, maxPrice: 2250, image: "71KY-hMjkiL.jpg", emoji: "🍫" },
+        { name: "シガール クッキー", minPrice: 1840, maxPrice: 2450, image: "511vJEF3j4L._AC_UF10001000_QL80_.jpg", emoji: "🧣" },
+        { name: "プレスバターサンド", minPrice: 1720, maxPrice: 2280, image: "pbs_plain_5p_1080x1080_b0cb8bc3-e77b-467c-a7db-3ed671feb40d.jpg", emoji: "🧈" },
+        { name: "キャラメルサンドクッキー", minPrice: 1650, maxPrice: 2850, image: "somurie_the-003_10_d_20240926110700.jpg", emoji: "🍮" },
+        { name: "メープルバタークッキー", minPrice: 1030, maxPrice: 1850, image: "TCT0798704_L.jpg", emoji: "🍁" },
+        { name: "東京ラスク プレミアム", minPrice: 1220, maxPrice: 2050, image: "almond_new.jpg", emoji: "🍞" },
+        { name: "日本橋 錦豊琳かりんとう", minPrice: 1430, maxPrice: 2250, image: "t006_2.jpg", emoji: "🥨" },
+        { name: "東京あられ 詰め合わせ", minPrice: 1020, maxPrice: 1550, image: "bon-appetit-world_91598-2021-9.jpg", emoji: "🍡" },
+        { name: "東京ハニーベア", minPrice: 1240, maxPrice: 1840, image: "IMG20221125134103a.jpg", emoji: "🧸" },
+        { name: "銀座いちごケーキ", minPrice: 1120, maxPrice: 1540, image: "ichigo_cake_sizzle.png", emoji: "🍓" },
+        { name: "江戸前 高級海苔セット", minPrice: 2550, maxPrice: 4550, image: "9513-chiba-09.jpg", emoji: "🌊" }
+      ];
+
+      // ゲーム状態の管理
+      let currentProducts = [];
+      let budget = 0;
+      let score = 0;
+      let totalQuestions = 0;
+      let hasAnswered = false;
+
+      // 概数設定モード: '1000' (百四捨五入), '100' (十四捨五入), '10' (一四捨五入), 'random' (ランダム)
+      let currentMode = '1000'; 
+      // 実際に現在の問題で使用する四捨五入単位（1000, 100, 10 のいずれか）
+      let activeRoundUnit = 1000;
+
+      // DOM要素
+      const budgetText = document.getElementById("budget-text");
+      const scoreText = document.getElementById("score-text");
+      const productList = document.getElementById("product-list");
+      const resultDiv = document.getElementById("result");
+      const yesButton = document.getElementById("yes-button");
+      const noButton = document.getElementById("no-button");
+      const newGameButton = document.getElementById("new-game-button");
+      const ruleGuideText = document.getElementById("rule-guide-text");
+      const eyebrowText = document.getElementById("eyebrow-text");
+
+      // モード切り替え関数
+      function changeMode(mode) {
+        currentMode = mode;
+        // ボタンのアクティブ表現を更新
+        const modes = ['1000', '100', '10', 'random'];
+        modes.forEach(m => {
+          const btn = document.getElementById(`mode-${m}`);
+          if (m === mode) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-checked', 'true');
+          } else {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-checked', 'false');
+          }
+        });
+
+        // モード変更時に新しいゲームを自動でスタート
+        startNewGame();
+      }
+
+      // 指定された位に応じた四捨五入関数
+      function getApproximateValue(num, unit) {
+        if (unit === 1000) {
+          // 百の位を四捨五入して、千の位までにする
+          return Math.round(num / 1000) * 1000;
+        } else if (unit === 100) {
+          // 十の位を四捨五入して、百の位までにする
+          return Math.round(num / 100) * 100;
+        } else if (unit === 10) {
+          // 一の位を四捨五入して、十の位までにする
+          return Math.round(num / 10) * 10;
+        }
+        return num;
+      }
+
+      // ルール説明文の更新
+      function updateRuleText(unit) {
+        if (unit === 1000) {
+          ruleGuideText.innerHTML = `お土産の金額を<b>百の位で四捨五入して、千の位まで</b>の概数にしよう！<br>(例：1,480円 → 1,000円 / 2,500円 → 3,000円)`;
+          eyebrowText.textContent = `東京土産編 ✈️ 千の位の概算`;
+        } else if (unit === 100) {
+          ruleGuideText.innerHTML = `お土産の金額を<b>十の位で四捨五入して、百の位まで</b>の概数にしよう！<br>(例：1,480円 → 1,500円 / 2,520円 → 2,500円)`;
+          eyebrowText.textContent = `東京土産編 ✈️ 百の位の概算`;
+        } else if (unit === 10) {
+          ruleGuideText.innerHTML = `お土産の金額を<b>一の位で四捨五入して、十の位まで</b>の概数にしよう！<br>(例：1,482円 → 1,480円 / 2,505円 → 2,510円)`;
+          eyebrowText.textContent = `東京土産編 ✈️ 十の位の概算`;
+        }
+        if (currentMode === 'random') {
+          eyebrowText.textContent = `🔥 【腕試しランダム】 ` + eyebrowText.textContent;
+        }
+      }
+
+      // ランダムな値の生成
+      function getRandomPrice(min, max) {
+        const base = Math.floor(Math.random() * (max - min + 1)) + min;
+        // 1円単位を細かく設定して、四捨五入の意義を出す（1円単位まで乱数にする）
+        return base;
+      }
+
+      // 新しいゲーム(問題)の作成
+      function startNewGame() {
+        hasAnswered = false;
+        resultDiv.classList.remove("show");
+        resultDiv.innerHTML = "";
+        yesButton.disabled = false;
+        noButton.disabled = false;
+
+        // アクティブな四捨五入の単位を決定
+        if (currentMode === 'random') {
+          const units = [1000, 100, 10];
+          activeRoundUnit = units[Math.floor(Math.random() * units.length)];
+        } else {
+          activeRoundUnit = parseInt(currentMode, 10);
+        }
+
+        // ガイドテキストの更新
+        updateRuleText(activeRoundUnit);
+
+        // 24種類の商品から重複なしで5個をランダムに選択
+        const shuffled = [...PRODUCT_DATABASE].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 5);
+
+        currentProducts = selected.map(item => {
+          const price = getRandomPrice(item.minPrice, item.maxPrice);
+          const correctApprox = getApproximateValue(price, activeRoundUnit);
+          return {
+            name: item.name,
+            image: item.image,
+            emoji: item.emoji,
+            price: price,
+            correctApprox: correctApprox
+          };
+        });
+
+        // 合計金額の計算
+        const actualTotal = currentProducts.reduce((sum, p) => sum + p.price, 0);
+        const approxTotal = currentProducts.reduce((sum, p) => sum + p.correctApprox, 0);
+
+        // 予算の設定:
+        // 四捨五入の粒度に合わせて余裕度(decisionMargin)を調整
+        let margin = 1000;
+        if (activeRoundUnit === 100) margin = 300;
+        if (activeRoundUnit === 10) margin = 100;
+
+        const decisionMargin = Math.random() > 0.5 ? margin : -margin;
+        
+        // 予算も四捨五入の単位に整えて表示を綺麗にする
+        budget = Math.max(3000, approxTotal + decisionMargin);
+        budget = getApproximateValue(budget, activeRoundUnit);
+
+        // 画面への反映
+        budgetText.textContent = budget.toLocaleString() + "円";
+        renderProducts();
+      }
+
+      // 商品リストの表示
+      function renderProducts() {
+        productList.innerHTML = "";
+        
+        // 入力時のヒントテキスト
+        let placeholderText = "千の位";
+        let stepVal = 1000;
+        if (activeRoundUnit === 100) {
+          placeholderText = "百の位";
+          stepVal = 100;
+        } else if (activeRoundUnit === 10) {
+          placeholderText = "十の位";
+          stepVal = 10;
+        }
+
+        currentProducts.forEach((product, index) => {
+          const li = document.createElement("li");
+          li.className = "product-item";
+          
+          // 万が一画像が存在しなかった場合のフォールバック用プレースホルダー画像URL
+          const fallbackPlaceholder = "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=150&q=80";
+
+          li.innerHTML = `
+            <div class="product-image-container">
+              <img 
+                src="${product.image}" 
+                class="product-image" 
+                alt="${product.name}" 
+                onerror="this.onerror=null; this.src='${fallbackPlaceholder}';" 
+              />
+            </div>
+            <span class="product-name">${product.emoji} ${product.name}</span>
+            <span class="product-price">${product.price.toLocaleString()}円</span>
+            <div class="approx-input-container">
+              <input 
+                type="number" 
+                class="approx-input" 
+                id="approx-input-${index}" 
+                placeholder="${placeholderText}" 
+                min="0" 
+                step="${stepVal}"
+                aria-label="${product.name}の概数"
+              />
+              <span class="approx-unit">円</span>
+            </div>
+          `;
+          productList.appendChild(li);
+        });
+      }
+
+      // ユーザーの概数入力チェック
+      function checkApproxInputs() {
+        let allCorrect = true;
+        const userApproxList = [];
+
+        currentProducts.forEach((product, index) => {
+          const inputEl = document.getElementById(`approx-input-${index}`);
+          const userVal = parseInt(inputEl.value, 10);
+          
+          if (isNaN(userVal) || userVal !== product.correctApprox) {
+            allCorrect = false;
+            inputEl.classList.add("incorrect");
+            inputEl.classList.remove("correct");
+          } else {
+            inputEl.classList.add("correct");
+            inputEl.classList.remove("incorrect");
+          }
+          userApproxList.push(isNaN(userVal) ? 0 : userVal);
+        });
+
+        return { allCorrect, userApproxList };
+      }
+
+      // 回答に対する判定処理
+      function handleAnswer(userChoice) {
+        if (hasAnswered) return;
+
+        // 1. 各商品の概数入力が正しいか確認
+        const { allCorrect, userApproxList } = checkApproxInputs();
+
+        // 2. 実際の金額と概数の金額の計算
+        const actualTotal = currentProducts.reduce((sum, p) => sum + p.price, 0);
+        const correctApproxTotal = currentProducts.reduce((sum, p) => sum + p.correctApprox, 0);
+        
+        // 予算内かどうかの判定 (概算の合計に基づいて、予算内に入るか判定する)
+        const canBuyBasedOnApprox = correctApproxTotal <= budget;
+        const canBuyBasedOnActual = actualTotal <= budget;
+
+        // 教育的意図: 本来の「見積もり」では概算合計が予算内であれば「買える」と計画するのが基本です。
+        // ここでは「概算での判断結果」と「実際の判断結果」を合わせて判定します。
+        const isActuallyCorrectToBuy = canBuyBasedOnApprox; 
+
+        // ユーザーの選択が正しかったか
+        const choiceIsCorrect = (userChoice === "yes" && isActuallyCorrectToBuy) || 
+                                (userChoice === "no" && !isActuallyCorrectToBuy);
+
+        // 完全正解判定（四捨五入が全部合っていて、かつ予算内判定も合っている）
+        const isPerfect = allCorrect && choiceIsCorrect;
+
+        hasAnswered = true;
+        totalQuestions++;
+        if (isPerfect) {
+          score++;
+        }
+
+        // スコア更新
+        scoreText.textContent = `${score} / ${totalQuestions}`;
+
+        // ボタンの無効化と入力のロック
+        yesButton.disabled = true;
+        noButton.disabled = true;
+        currentProducts.forEach((_, index) => {
+          document.getElementById(`approx-input-${index}`).disabled = true;
+        });
+
+        // 結果詳細のUI表示
+        showResultDetails(isPerfect, allCorrect, choiceIsCorrect, actualTotal, correctApproxTotal, isActuallyCorrectToBuy);
+      }
+
+      // 結果詳細表示の生成
+      function showResultDetails(isPerfect, allCorrect, choiceIsCorrect, actualTotal, correctApproxTotal, isActuallyCorrectToBuy) {
+        resultDiv.innerHTML = "";
+        
+        // タイトルバナー
+        const banner = document.createElement("div");
+        banner.className = `result-banner ${isPerfect ? 'win' : 'lose'}`;
+        
+        if (isPerfect) {
+          banner.textContent = "🎉 大正解！見積もりマスター！";
+        } else if (!allCorrect && choiceIsCorrect) {
+          banner.textContent = "⚠️ 判定は合っていましたが、お土産の四捨五入（概数）に間違いがあります！";
+        } else if (allCorrect && !choiceIsCorrect) {
+          banner.textContent = "❌ 概数は完璧でしたが、予算内に入るかの判定を間違えました！";
+        } else {
+          banner.textContent = "❌ 残念！もう一度お土産の金額を見積もってみよう！";
+        }
+        resultDiv.appendChild(banner);
+
+        // 詳細パネル
+        const details = document.createElement("div");
+        details.className = "details-panel";
+        
+        let detailsHtml = `
+          <h3>お土産の見積もり詳細</h3>
+          <ul class="details-list">
+        `;
+
+        currentProducts.forEach((product, index) => {
+          const inputEl = document.getElementById(`approx-input-${index}`);
+          const userVal = parseInt(inputEl.value, 10) || 0;
+          const isInputCorrect = userVal === product.correctApprox;
+
+          detailsHtml += `
+            <li class="details-item">
+              <span class="details-product-info">
+                <span>${product.emoji} ${product.name} (${product.price.toLocaleString()}円)</span>
+              </span>
+              <span>
+                入力: <b style="color: ${isInputCorrect ? 'var(--success)' : 'var(--danger)'}">${userVal.toLocaleString()}円</b> 
+                (正解: <b>${product.correctApprox.toLocaleString()}円</b>)
+              </span>
+            </li>
+          `;
+        });
+
+        const actualStatusText = actualTotal <= budget ? "予算内" : "予算オーバー";
+        const approxStatusText = correctApproxTotal <= budget ? "予算内" : "予算オーバー";
+
+        detailsHtml += `
+          </ul>
+          <div class="math-summary">
+            <div class="math-line">
+              <span>概算（およそ）の合計:</span>
+              <span><b>${correctApproxTotal.toLocaleString()}円</b> (${approxStatusText})</span>
+            </div>
+            <div class="math-line">
+              <span>実際の合計金額:</span>
+              <span><b>${actualTotal.toLocaleString()}円</b> (${actualStatusText})</span>
+            </div>
+            <div class="math-line">
+              <span>今回の予算:</span>
+              <span style="color: var(--accent)"><b>${budget.toLocaleString()}円</b></span>
+            </div>
+            <div class="math-line highlight">
+              <span>結論（見積もりで買える？）：</span>
+              <span style="color: ${isActuallyCorrectToBuy ? 'var(--success)' : 'var(--danger)'}">
+                <b>${isActuallyCorrectToBuy ? '買えます！' : '買えません！'}</b>
+              </span>
+            </div>
+          </div>
+          <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.8rem; text-align: center; font-weight: normal;">
+            ※概数の合計が予算以下であれば「買える」、予算を越えていれば「買えない」と判断するのが見積もりの基本です。
+          </p>
+        `;
+
+        details.innerHTML = detailsHtml;
+        resultDiv.appendChild(details);
+        resultDiv.classList.add("show");
+      }
+
+      // イベントリスナーの設定
+      yesButton.addEventListener("click", () => handleAnswer("yes"));
+      noButton.addEventListener("click", () => handleAnswer("no"));
+      newGameButton.addEventListener("click", startNewGame);
+
+      // ゲームの初期スタート
+      window.onload = () => {
+        startNewGame();
+      };
+    </script>
+  </body>
+</html>        color: var(--neutral-800);
         line-height: 1.6;
         padding: 1rem;
         min-height: 100vh;
